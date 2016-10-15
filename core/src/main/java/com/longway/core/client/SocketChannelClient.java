@@ -15,6 +15,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 public class SocketChannelClient implements Runnable, NetworkMonitor {
     private static final String TAG = SocketChannelClient.class.getSimpleName();
     private String mHost;
@@ -32,9 +33,6 @@ public class SocketChannelClient implements Runnable, NetworkMonitor {
 
     /**
      * set custom messageHandler
-     *
-     * @param readHandler
-     * @return
      */
     public SocketChannelClient setMessageHandler(IReadHandler readHandler) {
         if (readHandler == null) {
@@ -166,6 +164,12 @@ public class SocketChannelClient implements Runnable, NetworkMonitor {
     }
 
 
+    /**
+     *
+     * @param context 上下文
+     * @param host 主机
+     * @param port 端口
+     */
     public SocketChannelClient(Context context, String host, int port) {
         if (context == null) {
             throw new NullPointerException("context==null");
@@ -178,6 +182,10 @@ public class SocketChannelClient implements Runnable, NetworkMonitor {
         }
         if (!(context instanceof Application)) {
             mContext = context.getApplicationContext();
+        }
+        // fix bug
+        if (mContext == null) {
+            mContext = context;
         }
         this.mHost = host;
         this.mPort = port;
