@@ -7,6 +7,7 @@ import android.util.Log;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -165,10 +166,9 @@ public class SocketChannelClient implements Runnable, NetworkMonitor {
 
 
     /**
-     *
      * @param context 上下文
-     * @param host 主机
-     * @param port 端口
+     * @param host    主机
+     * @param port    端口
      */
     public SocketChannelClient(Context context, String host, int port) {
         if (context == null) {
@@ -280,6 +280,10 @@ public class SocketChannelClient implements Runnable, NetworkMonitor {
             }
             try {
                 SocketChannel socketChannel = SocketChannel.open();
+                Socket socket = socketChannel.socket();
+                socket.setKeepAlive(true);
+                socket.setTcpNoDelay(true);
+                socket.setSoTimeout(10_1000);
                 socketChannel.configureBlocking(false);
                 socketChannel.connect(new InetSocketAddress(mHost, mPort));
                 int count = 0;
@@ -333,6 +337,7 @@ public class SocketChannelClient implements Runnable, NetworkMonitor {
                     startReconnect();
                 }
             }
+
         }
     }
 

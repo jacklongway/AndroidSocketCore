@@ -63,6 +63,9 @@ public class ReadWorker implements IReadHandler {
                 while ((len = socketChannel.read(byteBuffer)) > 0) {
                     byteBuffer.flip();
                     os.write(byteBuffer.array(), 0, len);
+                    if (!socketChannel.isConnected()) {
+                        return;
+                    }
                 }
                 os.flush();
                 Log.d(TAG, os.toString());

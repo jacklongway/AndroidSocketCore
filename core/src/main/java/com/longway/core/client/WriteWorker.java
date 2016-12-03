@@ -122,7 +122,7 @@ public class WriteWorker extends HandlerThread {
         mSender = new Sender(looper);
     }
 
-    public long getLastActiveSendTime() {
+    public synchronized long getLastActiveSendTime() {
         return mLastActiveSendTime;
     }
 
