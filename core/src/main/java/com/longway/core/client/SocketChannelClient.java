@@ -16,6 +16,9 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static android.support.v7.widget.AppCompatDrawableManager.get;
 
 public class SocketChannelClient implements Runnable, NetworkMonitor {
     private static final String TAG = SocketChannelClient.class.getSimpleName();
@@ -31,6 +34,10 @@ public class SocketChannelClient implements Runnable, NetworkMonitor {
     private LinkedList<ConnectListener> mConnectListeners = new LinkedList<>();
     private AtomicBoolean mDestroy = new AtomicBoolean(false);
     private AtomicBoolean mConnecting = new AtomicBoolean(false);
+    /**
+     * 统计连接服务端连续失败的次数,最大重连次数{@link Config.MAX_RECONNECT_COUNT}
+     */
+    private AtomicInteger mConnectServerFailCount = new AtomicInteger();
 
     /**
      * set custom messageHandler
@@ -183,26 +190,36 @@ public class SocketChannelClient implements Runnable, NetworkMonitor {
         if (!(context instanceof Application)) {
             mContext = context.getApplicationContext();
         }
-        // fix bug
         if (mContext == null) {
             mContext = context;
         }
         this.mHost = host;
         this.mPort = port;
-        registerNetworkMonitor();
-        enforceWriteWorker();
-        enforceReadHandler();
-        enforceKeepAlive();
-        enforceReconnectedThread();
     }
 
     public static SocketChannelClient newClient(Context context, String host, int port) {
         return new SocketChannelClient(context, host, port);
     }
 
+    /**
+     *
+     * @return
+     */
     public SocketChannelClient start() {
+        // 1.0.1 版本添加 只有调用者需要真正启动连接的时候才初始化合作对象
+        // 这样避免了在一些场景下，比如有的app需要在应用启动的时候，根据一些
+        // 配置数据，初始化client, 但是在真正需要的时候再去启动client。
+        init();
         new Thread(this).start();
         return this;
+    }
+
+    private void init() {
+        registerNetworkMonitor();
+        enforceWriteWorker();
+        enforceReadHandler();
+        enforceKeepAlive();
+        enforceReconnectedThread();
     }
 
     public boolean isConnected() {
@@ -301,6 +318,7 @@ public class SocketChannelClient implements Runnable, NetworkMonitor {
                     }
                 }
                 notifyConnectListenerSuccess("connect to " + mHost + ":" + mPort + " success.");
+                mConnectServerFailCount.set(0); // clear flag
                 mSocketChannelClient = socketChannel;
                 mWriteWorker.sendPendingMessage();
                 Selector selector = Selector.open();
@@ -334,7 +352,16 @@ public class SocketChannelClient implements Runnable, NetworkMonitor {
                     mConnecting.set(false);
                     mSocketChannelClient = null;
                     notifyConnectListenerFail(e.getLocalizedMessage());
-                    startReconnect();
+                    // 1.0.1 版本添加 修复无限重连问题
+                    final int count = mConnectServerFailCount.incrementAndGet();
+                    if (count <= Config.MAX_RECONNECT_COUNT) {
+                        startReconnect();
+                    } else {
+                        Log.w(TAG, "reconnectCount>5", e);
+                        mConnectServerFailCount.set(0); // next reconnect
+                    }
+                } else {
+                    mConnectServerFailCount.set(0); // clear flag
                 }
             }
 

@@ -60,7 +60,13 @@ public class NetworkMonitorReceiver extends BroadcastReceiver {
         }
     }
 
-    private static final LinkedList<NetworkMonitor> mObservable = new LinkedList();
+    /**
+     * 监听器对象
+     * 修复 issue 问题，泛型缺失<>符号建议，这个警告其实可以不用处理，泛型的本质只是一种编译时，在
+     * 运行时根本不存在泛型的概念了，建议提问者去了解一下，泛型插除机制，以及泛型的编译时特性。这里
+     * 还是添加上，满足提问者的强迫症。
+     */
+    private static final LinkedList<NetworkMonitor> mObservable = new LinkedList<>();
 
     public static void registerNetworkMonitor(NetworkMonitor networkMonitor) {
         if (networkMonitor == null) {
